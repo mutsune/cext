@@ -8,7 +8,7 @@ machine with one command.
 
 ## How it works
 
-Every saved extension is one git repository under the storage directory:
+Every saved extension is one git repository under the store directory:
 
 ```
 $HOME/Library/Application Support/Google/private extensions/
@@ -17,14 +17,15 @@ $HOME/Library/Application Support/Google/private extensions/
 ```
 
 There is no metadata file to keep in sync: `cext list` recovers each URL by reading the folder's
-`git remote get-url origin`. Pass `--dir <DIR>` to any command to use a different storage
-directory.
+`git remote get-url origin`. Pass `--store-dir <DIR>` to any command to use a different store
+directory, or set it once via [`CEXT_STORE_DIR`](#store-directory).
 
 ## Requirements
 
 - `git` on your PATH — `add`, `list`, and `import` shell out to it
 - Rust 1.85+ (only to build from source)
-- The default storage path assumes macOS; other platforms work via `--dir`
+- The default store directory assumes macOS; other platforms work via `--store-dir` or
+  `CEXT_STORE_DIR`
 
 ## Install
 
@@ -47,7 +48,8 @@ cargo install --path .
 | `cext import <file>` | Clone every extension in a URL list file |
 | `cext remove <name> [--yes]` | Delete a saved extension |
 
-Every command also accepts `--dir <DIR>`. Run `cext <command> --help` for full details.
+Every command also accepts `--store-dir <DIR>`. Run `cext <command> --help` for full details.
+See [Store directory](#store-directory) for where the files end up.
 
 ### `add` — save an extension
 
@@ -56,7 +58,7 @@ cext add https://github.com/someone/my-extension.git
 cext add git@github.com:someone/my-extension.git --name my-ext
 ```
 
-Without `--name`, this is the same as running `git clone <url>` inside the storage directory — git
+Without `--name`, this is the same as running `git clone <url>` inside the store directory — git
 picks the folder name. With `--name`, you choose it. Either way, an extension that is already
 saved is skipped rather than re-cloned, so re-running `add` is safe.
 
@@ -102,7 +104,7 @@ cext remove my-extension
 cext remove my-extension --yes
 ```
 
-`name` is the folder name under the storage directory. A confirmation prompt is shown unless you
+`name` is the folder name under the store directory. A confirmation prompt is shown unless you
 pass `-y` / `--yes`.
 
 ## Syncing across machines
@@ -123,7 +125,20 @@ Commit `extensions.txt` to a dotfiles repo and the set stays reproducible.
 
 1. Open `chrome://extensions`
 2. Turn on **Developer mode**
-3. Click **Load unpacked** and select the extension's folder under the storage directory
+3. Click **Load unpacked** and select the extension's folder under the store directory
+
+## Store directory
+
+The store directory is the one folder every saved extension lives in, as a git clone per
+extension. All four commands work relative to it, and it is created on first use if missing.
+
+Three ways to point `cext` at it, highest precedence first:
+
+| Source | Example |
+| --- | --- |
+| `--store-dir <DIR>` on the command line | `cext list --store-dir ~/ext` |
+| `CEXT_STORE_DIR` in the environment | `export CEXT_STORE_DIR=~/ext` |
+| Built-in default | `$HOME/Library/Application Support/Google/private extensions/` |
 
 ## Development
 

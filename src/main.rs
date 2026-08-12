@@ -6,7 +6,7 @@ use cli::{Cli, Commands};
 
 fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
-    let store_dir = cli.dir.clone().unwrap_or_else(ops::default_store_dir);
+    let store_dir = cli.store_dir.clone().unwrap_or_else(ops::default_store_dir);
 
     match cli.command {
         Commands::Add { url, name } => ops::add(&store_dir, &url, name.as_deref()),
