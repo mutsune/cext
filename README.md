@@ -1,6 +1,6 @@
 # chrome-ext-manager (`cext`)
 
-Chrome の「野良（独自）拡張機能」を git リポジトリとして一括管理する CLI ツールです。
+Chrome の「独自拡張機能」を git リポジトリとして一括管理する CLI ツールです。
 各拡張機能を git remote URL 単位で clone・保存し、一覧の書き出しや読み込み、削除ができます。
 
 - バイナリ名: `cext`
