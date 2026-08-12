@@ -1,0 +1,19 @@
+[package]
+name = "chrome-ext-manager"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+description = "Manage private/unpacked Chrome extensions stored as git repositories"
+license = "MIT"
+
+[[bin]]
+name = "cext"
+path = "src/main.rs"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+anyhow = "1"
+
+[profile.release]
+opt-level = "z"
+lto = true
