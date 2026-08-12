@@ -30,14 +30,13 @@ directory, or set it once via [`CEXT_STORE_DIR`](#store-directory).
 ## Install
 
 ```bash
-cargo install --path .
+cargo install --git https://github.com/mutsune/cext.git
 ```
 
-Or build and place the binary yourself:
+From a local checkout:
 
 ```bash
-cargo build --release
-cp target/release/cext /usr/local/bin/cext
+cargo install --path .
 ```
 
 ## Commands
