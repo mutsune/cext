@@ -5,10 +5,10 @@ use std::path::PathBuf;
 #[derive(Parser)]
 #[command(name = "cext", version, about, long_about = None)]
 pub struct Cli {
-    /// Override the extensions storage directory
+    /// Override the extensions store directory
     /// (default: $HOME/Library/Application Support/Google/private extensions/)
-    #[arg(long, global = true, value_name = "DIR")]
-    pub dir: Option<PathBuf>,
+    #[arg(long, global = true, value_name = "DIR", env = "CEXT_STORE_DIR")]
+    pub store_dir: Option<PathBuf>,
 
     #[command(subcommand)]
     pub command: Commands,
@@ -43,7 +43,7 @@ pub enum Commands {
 
     /// Remove a saved extension by name
     Remove {
-        /// Name of the saved extension (its folder name under the storage dir)
+        /// Name of the saved extension (its folder name under the store dir)
         name: String,
 
         /// Skip the confirmation prompt

@@ -4,7 +4,7 @@ use std::io::{self, BufRead, Write};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-/// Default storage location, used when `--dir` is not given.
+/// Default store directory, used when `--store-dir` is not given.
 pub fn default_store_dir() -> PathBuf {
     let home = std::env::home_dir().expect("could not determine home directory");
     home.join("Library/Application Support/Google/private extensions")
