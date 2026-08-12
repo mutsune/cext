@@ -7,7 +7,7 @@ use std::path::PathBuf;
 pub struct Cli {
     /// Override the extensions storage directory
     /// (default: $HOME/Library/Application Support/Google/private extensions/)
-    #[arg(long, global = true, value_name = "DIR")]
+    #[arg(long, global = true, value_name = "DIR", env = "CEXT_DIR")]
     pub dir: Option<PathBuf>,
 
     #[command(subcommand)]

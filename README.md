@@ -17,14 +17,14 @@ $HOME/Library/Application Support/Google/private extensions/
 ```
 
 There is no metadata file to keep in sync: `cext list` recovers each URL by reading the folder's
-`git remote get-url origin`. Pass `--dir <DIR>` to any command to use a different storage
-directory.
+`git remote get-url origin`. Set the `CEXT_DIR` environment variable, or pass `--dir <DIR>` to any
+command, to use a different storage directory (`--dir` takes precedence over `CEXT_DIR`).
 
 ## Requirements
 
 - `git` on your PATH — `add`, `list`, and `import` shell out to it
 - Rust 1.85+ (only to build from source)
-- The default storage path assumes macOS; other platforms work via `--dir`
+- The default storage path assumes macOS; other platforms work via `CEXT_DIR` or `--dir`
 
 ## Install
 
@@ -48,7 +48,8 @@ cp target/release/cext /usr/local/bin/cext
 | `cext import <file>` | Clone every extension in a URL list file |
 | `cext remove <name> [--yes]` | Delete a saved extension |
 
-Every command also accepts `--dir <DIR>`. Run `cext <command> --help` for full details.
+Every command also accepts `--dir <DIR>`, or the `CEXT_DIR` environment variable. Run
+`cext <command> --help` for full details.
 
 ### `add` — save an extension
 
