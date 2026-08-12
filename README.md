@@ -1,156 +1,144 @@
 # chrome-ext-manager (`cext`)
 
-Chrome の「独自拡張機能」を git リポジトリとして一括管理する CLI ツールです。
-各拡張機能を git remote URL 単位で clone・保存し、一覧の書き出しや読み込み、削除ができます。
+A CLI tool that manages your private/unpacked Chrome extensions as git repositories.
 
-- バイナリ名: `cext`
-- 実装言語: Rust
-- CLI フレームワーク: [clap](https://docs.rs/clap/) (derive API)
-- git 操作: システムの `git` コマンドをサブプロセスとして呼び出します（`git` が PATH 上に必要です）
+Chrome has no way to sync extensions you load unpacked. `cext` keeps each one as a git clone in a
+single directory, so you can export the whole set as a plain URL list and restore it on another
+machine with one command.
 
-## 保存場所
+## How it works
 
-デフォルトの保存先はこちらです。
+Every saved extension is one git repository under the storage directory:
 
 ```
 $HOME/Library/Application Support/Google/private extensions/
+├── my-extension/       # git clone of https://github.com/someone/my-extension.git
+└── another-extension/  # git clone of https://github.com/other/another-extension.git
 ```
 
-保存された各拡張機能は、このディレクトリ配下に **1つの git リポジトリ（フォルダ）** として置かれます。
-一覧表示の際は、各フォルダの `git remote get-url origin` を読み取って URL を復元するので、
-別途メタデータファイルを持つ必要がありません。
+There is no metadata file to keep in sync: `cext list` recovers each URL by reading the folder's
+`git remote get-url origin`. Pass `--dir <DIR>` to any command to use a different storage
+directory.
 
-`--dir <DIR>` オプションで保存先を上書きできます（テストや別ディレクトリ運用に便利です）。
+## Requirements
 
-## ビルド
+- `git` on your PATH — `add`, `list`, and `import` shell out to it
+- Rust 1.85+ (only to build from source)
+- The default storage path assumes macOS; other platforms work via `--dir`
 
-```bash
-cd chrome-ext-manager
-cargo build --release
-# 生成物: target/release/cext
-```
-
-PATH の通った場所に置く場合:
+## Install
 
 ```bash
-cp target/release/cext /usr/local/bin/cext
-# もしくは
 cargo install --path .
 ```
 
-## 使い方
+Or build and place the binary yourself:
 
-### 1. 拡張機能を保存する（git clone して配置）
+```bash
+cargo build --release
+cp target/release/cext /usr/local/bin/cext
+```
+
+## Commands
+
+| Command | What it does |
+| --- | --- |
+| `cext add <url> [--name <name>]` | Clone an extension from a git remote URL |
+| `cext list [--output <file>]` | Print saved extensions as a URL list |
+| `cext import <file>` | Clone every extension in a URL list file |
+| `cext remove <name> [--yes]` | Delete a saved extension |
+
+Every command also accepts `--dir <DIR>`. Run `cext <command> --help` for full details.
+
+### `add` — save an extension
 
 ```bash
 cext add https://github.com/someone/my-extension.git
-```
-
-- `--name` を指定しない場合は、保存先ディレクトリの中で普通に `git clone <url>` を実行するのと同じです。
-  フォルダ名は git 自身が決めます（自前で URL をパースしたりはしません）。
-- `--name` で保存フォルダ名を明示することもできます。
-
-```bash
 cext add git@github.com:someone/my-extension.git --name my-ext
 ```
 
-- `--name` 指定時は、既に同名フォルダが存在すれば clone をスキップします。
-  `--name` 省略時は通常の `git clone` と同様、同名ディレクトリが既にあると git 自体がエラーで止まります。
+Without `--name`, this is the same as running `git clone <url>` inside the storage directory — git
+picks the folder name. With `--name`, you choose it. Either way, an extension that is already
+saved is skipped rather than re-cloned, so re-running `add` is safe.
 
-### 2. 保存済み拡張機能を URL テキストリストとして出力する
+### `list` — export the saved set
 
 ```bash
 cext list
 ```
 
-標準出力に、保存されているすべての拡張機能の remote URL が 1 行 1 件で出力されます。
+Prints one remote URL per line to stdout:
 
 ```
 https://github.com/someone/my-extension.git
 https://github.com/other/another-extension.git
 ```
 
-ファイルに書き出す場合:
+A folder without an `origin` remote is skipped with a warning. Use `--output` to write to a file
+instead, which produces the exact format `import` reads:
 
 ```bash
 cext list --output extensions.txt
 ```
 
-このファイルはそのまま `import` コマンドの入力として使えます。
-
-### 3. リストファイルを読み込んで一括保存する
+### `import` — restore a saved set
 
 ```bash
 cext import extensions.txt
 ```
 
-- ファイルは 1 行 1 URL の形式（`list --output` の出力と同じ形式）。
-- 空行、および `#` から始まる行はコメントとして無視されます。
-- 既に保存済みの拡張機能はスキップされ、未保存のものだけ clone されます。
-- 複数マシン間で保存内容を同期する用途を想定しています（`list --output` → 別マシンで `import`）。
-
-`extensions.txt` の例:
+Reads one URL per line; blank lines and `#` comments are ignored. Extensions that are already
+saved are skipped, so only missing ones get cloned:
 
 ```
-# 業務用拡張機能
+# Work extensions
 https://github.com/someone/my-extension.git
 https://github.com/other/another-extension.git
 ```
 
-### 4. 拡張機能を削除する
+### `remove` — delete an extension
 
 ```bash
 cext remove my-extension
-```
-
-- `name` には保存フォルダ名（`add` 時の名前、または `list` で確認できる URL から推測できる名前）を指定します。
-- 確認プロンプトが表示されます。スキップするには `-y` / `--yes` を付けます。
-
-```bash
 cext remove my-extension --yes
 ```
 
-## コマンド一覧
+`name` is the folder name under the storage directory. A confirmation prompt is shown unless you
+pass `-y` / `--yes`.
 
-```
-cext <COMMAND>
+## Syncing across machines
 
-Commands:
-  add     Clone a Chrome extension from a git remote URL and save it
-  list    List saved extensions as a plain URL text list
-  import  Import a URL list file and save every extension listed in it
-  remove  Remove a saved extension by name
+```bash
+# on the machine that has the extensions
+cext list --output extensions.txt
 
-Options:
-      --dir <DIR>  Override the extensions storage directory
-  -h, --help       Print help
-  -V, --version    Print version
+# on the other machine
+cext import extensions.txt
 ```
 
-各サブコマンドの詳細は `cext <command> --help` でも確認できます。
+Commit `extensions.txt` to a dotfiles repo and the set stays reproducible.
 
-## Chrome への読み込み方（参考）
+## Loading into Chrome
 
-`cext` は拡張機能ファイルを clone・保存するところまでを担当します。実際に Chrome に読み込ませるには:
+`cext` only clones and stores the extension files — Chrome still has to load them:
 
-1. `chrome://extensions` を開く
-2. 「デベロッパー モード」を ON にする
-3. 「パッケージ化されていない拡張機能を読み込む」から、`$HOME/Library/Application Support/Google/private extensions/<拡張機能名>` を選択する
+1. Open `chrome://extensions`
+2. Turn on **Developer mode**
+3. Click **Load unpacked** and select the extension's folder under the storage directory
 
-## 動作要件
-
-- Rust（`cargo build` でビルドする場合）
-- `git` コマンドが PATH 上にあること（`add` / `import` / `list` で使用します）
-- macOS を想定したデフォルトパスですが、`--dir` を指定すれば他 OS でも動作します
-
-## プロジェクト構成
+## Development
 
 ```
-chrome-ext-manager/
-├── Cargo.toml
-├── README.md
-└── src/
-    ├── main.rs   # エントリポイント、コマンドのディスパッチ
-    ├── cli.rs    # clap によるサブコマンド定義
-    └── ops.rs    # add / list / import / remove の実装
+src/
+├── main.rs   # entry point, command dispatch
+├── cli.rs    # clap subcommand definitions
+└── ops.rs    # add / list / import / remove implementations
+```
+
+Built with [clap](https://docs.rs/clap/) (derive API) and [anyhow](https://docs.rs/anyhow/). All
+git work is done by invoking the system `git` binary as a subprocess rather than linking a git
+library.
+
+```bash
+cargo test
 ```
