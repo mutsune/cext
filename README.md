@@ -29,6 +29,33 @@ directory, or set it once via [`CEXT_STORE_DIR`](#store-directory).
 
 ## Install
 
+### Prebuilt binary
+
+Every tagged release publishes a self-contained binary for macOS and Linux on the
+[releases page](https://github.com/mutsune/cext/releases), each with a `.sha256` file next to it.
+The Linux builds are statically linked against musl, so they run on any distribution.
+
+| Platform | Asset |
+| --- | --- |
+| macOS (Apple Silicon) | `cext-aarch64-apple-darwin.tar.gz` |
+| macOS (Intel) | `cext-x86_64-apple-darwin.tar.gz` |
+| Linux (x86_64) | `cext-x86_64-unknown-linux-musl.tar.gz` |
+| Linux (arm64) | `cext-aarch64-unknown-linux-musl.tar.gz` |
+
+```bash
+target=aarch64-apple-darwin  # pick the row that matches your machine
+curl -sSfL "https://github.com/mutsune/cext/releases/latest/download/cext-$target.tar.gz" | tar xz
+sudo mv cext /usr/local/bin/
+```
+
+The binaries are unsigned. Downloading with `curl` as above keeps Gatekeeper out of the way; if you
+grab the archive with a browser instead, macOS quarantines it and you need
+`xattr -d com.apple.quarantine cext` before the first run.
+
+On Linux, also set [`CEXT_STORE_DIR`](#store-directory) — the built-in default is a macOS path.
+
+### From source
+
 ```bash
 cargo install --git https://github.com/mutsune/cext.git
 ```
@@ -155,4 +182,14 @@ library.
 
 ```bash
 cargo test
+```
+
+### Releasing
+
+Push a `v`-prefixed tag matching the `version` in `Cargo.toml`. The release workflow verifies that
+the two agree, builds all four targets, then publishes a GitHub Release with every archive attached
+at once.
+
+```bash
+git tag v0.1.0 && git push origin v0.1.0
 ```
