@@ -187,7 +187,9 @@ cargo test
 ### Releasing
 
 Push a `v`-prefixed tag matching the `version` in `Cargo.toml`. The release workflow verifies that
-the two agree, creates the GitHub Release, then builds and uploads the four target archives.
+the two agree, uploads the four target archives to a draft Release, and publishes it only once
+every one of them has landed. If a target fails to build, the Release stays a draft — fix it and
+re-run the workflow.
 
 ```bash
 git tag v0.1.0 && git push origin v0.1.0

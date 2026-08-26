@@ -34,17 +34,20 @@ jobs:
             exit 1
           fi
 
-      # upload-assets only uploads; the release has to exist first. Re-running
-      # the workflow on the same tag must not fail, hence the existence check.
-      - name: Create release
+      # upload-assets only uploads; the release has to exist first. It is created
+      # as a draft so nobody sees a half-uploaded set of assets -- publish-release
+      # flips it live once all four targets have landed. Re-running the workflow
+      # on the same tag must not fail, hence the existence check.
+      - name: Create draft release
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.ref_name }}
         run: |
-          if gh release view "${TAG}" >/dev/null 2>&1; then
+          if gh release view "${TAG}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
             echo "release ${TAG} already exists"
           else
-            gh release create "${TAG}" --title "${TAG}" --generate-notes --verify-tag
+            gh release create "${TAG}" --repo "${GITHUB_REPOSITORY}" \
+              --draft --title "${TAG}" --generate-notes --verify-tag
           fi
 
   upload-assets:
@@ -88,3 +91,18 @@ jobs:
           build-tool: cargo
           locked: true
           checksum: sha256
+
+  # `needs` only succeeds when every matrix leg did, so a single failed target
+  # leaves the release sitting as a draft instead of publishing it incomplete.
+  publish-release:
+    needs: upload-assets
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: gh release edit "${TAG}" --repo "${GITHUB_REPOSITORY}" --draft=false
