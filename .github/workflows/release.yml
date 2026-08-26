@@ -1,0 +1,90 @@
+name: Release
+
+on:
+  push:
+    tags: ['v[0-9]+.[0-9]+.[0-9]+*']
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Check tag matches Cargo.toml version
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          version="$(cargo metadata --no-deps --format-version 1 | jq -r '.packages[0].version')"
+          if [[ "${TAG}" != "v${version}" ]]; then
+            echo "::error::tag ${TAG} does not match Cargo.toml version ${version}"
+            exit 1
+          fi
+
+      # upload-assets only uploads; the release has to exist first. Re-running
+      # the workflow on the same tag must not fail, hence the existence check.
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          if gh release view "${TAG}" >/dev/null 2>&1; then
+            echo "release ${TAG} already exists"
+          else
+            gh release create "${TAG}" --title "${TAG}" --generate-notes --verify-tag
+          fi
+
+  upload-assets:
+    needs: create-release
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: aarch64-apple-darwin
+            os: macos-latest
+          - target: x86_64-apple-darwin
+            os: macos-latest
+          - target: x86_64-unknown-linux-musl
+            os: ubuntu-latest
+          - target: aarch64-unknown-linux-musl
+            os: ubuntu-24.04-arm
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659 # v1.17.0
+        with:
+          toolchain: stable
+          target: ${{ matrix.target }}
+          # Release builds are one-shot; a warm cache buys little and would be
+          # writable state feeding into a published artifact.
+          cache: false
+
+      # Every target is built on a runner of its own architecture, and the crate
+      # is pure Rust, so plain cargo covers all four -- no cross/docker needed.
+      # The musl targets link statically via Rust's bundled musl libc.
+      - uses: taiki-e/upload-rust-binary-action@f0d45ae91ee7b8ee928de7a9d04d893a08bcbec6 # v1.30.2
+        with:
+          bin: cext
+          target: ${{ matrix.target }}
+          build-tool: cargo
+          locked: true
+          checksum: sha256
